@@ -1,0 +1,161 @@
+from .sar_io import load_sar
+#from .io import write
+
+from .filters.refined_lee_geosar import refined_lee
+
+from .sar_change import difference_change
+from .sar_change import ratio_change
+
+# """
+# GeoSAR
+# ======
+
+# A Python library for Synthetic Aperture Radar (SAR) image processing.
+
+# GeoSAR provides modular algorithms for
+
+# - Radiometric conversion
+# - Local statistics
+# - Speckle filtering
+# - Change detection
+# - Automatic thresholding
+# - Morphological processing
+# - End-to-end flood detection
+
+# Author:
+#     Santosh Kumar Singh
+
+# License:
+#     MIT
+# """
+
+# __version__ = "1.0.0"
+# __author__ = "Santosh Kumar Singh"
+# __license__ = "MIT"
+
+from .sar_change import difference_change
+# # ==========================================================
+# # Core Data Model
+# # ==========================================================
+
+# from .sar_image import SARImage
+
+# # ==========================================================
+# # End-to-End Pipeline
+# # ==========================================================
+
+# from .sar_pipeline import detect_flood
+
+# # ==========================================================
+# # Radiometric Conversion
+# # ==========================================================
+
+# from .sar_radiometry import (
+#     db_to_linear,
+#     linear_to_db,
+# )
+
+# # ==========================================================
+# # Local Statistics
+# # ==========================================================
+
+# from .sar_statistics import (
+#     local_mean,
+#     local_variance,
+#     equivalent_number_of_looks,
+# )
+
+# # ==========================================================
+# # Speckle Filters
+# # ==========================================================
+
+# from .sar_filters import (
+#     lee_filter,
+#     frost_filter,
+# )
+
+# # ==========================================================
+# # Change Detection
+# # ==========================================================
+
+# from .sar_change import (
+#     ratio_change,
+#     log_ratio_change,
+#     difference_change,
+# )
+
+# # ==========================================================
+# # Thresholding
+# # ==========================================================
+
+# from .sar_threshold import (
+#     otsu_threshold,
+   
+# )
+
+# from .sar_flood import (
+#     threshold_flood,
+   
+# )
+
+# # ==========================================================
+# # Morphological Processing
+# # ==========================================================
+
+# from .sar_postprocess import (
+#     binary_opening,
+#     binary_closing,
+#     label_connected_components,
+#     remove_small_objects,
+# )
+
+# # ==========================================================
+# # Public API
+# # ==========================================================
+
+# __all__ = [
+
+#     # Core
+#     "SARImage",
+
+#     # Pipeline
+#     "detect_flood",
+
+#     # Conversion
+#     "db_to_linear",
+#     "linear_to_db",
+
+#     # Statistics
+#     "local_mean",
+#     "local_variance",
+#     "equivalent_number_of_looks",
+
+#     # Filters
+#     "lee_filter",
+#     "frost_filter",
+
+#     # Change Detection
+#     "ratio_change",
+#     "log_ratio_change",
+#     "difference_change",
+
+#     # Thresholding
+#     "otsu_threshold",
+#     "threshold_flood",
+
+#     # Morphology
+#     "binary_opening",
+#     "binary_closing",
+#     "label_connected_components",
+#     "remove_small_objects",
+# ]
+
+# def about():
+#     """
+#     Display GeoSAR package information.
+#     """
+
+#     print(f"GeoSAR Version : {__version__}")
+#     print("Synthetic Aperture Radar Processing Library")
+#     print("Author         : Santosh Kumar Singh")
+#     print("License        : MIT")
