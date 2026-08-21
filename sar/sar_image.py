@@ -33,26 +33,72 @@ class SARImage:
         """
     
         valid = self.valid_pixels
-    
+
+        valid_pixels = valid.size
+        
+        nodata_pixels = self.mask.size - valid_pixels
+        
+        if valid_pixels == 0:
+        
+            return {
+        
+                "minimum": None,
+        
+                "maximum": None,
+        
+                "mean": None,
+        
+                "median": None,
+        
+                "std": None,
+        
+                "valid_pixels": valid_pixels,
+        
+                "nodata_pixels": nodata_pixels,
+        
+                "nan_percentage": 100.0,
+        
+            }
+        
         return {
-    
+        
             "minimum": float(np.min(valid)),
-    
+        
             "maximum": float(np.max(valid)),
-    
+        
             "mean": float(np.mean(valid)),
-    
+        
             "median": float(np.median(valid)),
-    
+        
             "std": float(np.std(valid)),
-    
-            "valid_pixels": int(self.mask.sum()),
-    
-            "nodata_pixels": int((~self.mask).sum()),
-    
+        
+            "valid_pixels": valid_pixels,
+        
+            "nodata_pixels": nodata_pixels,
+        
             "nan_percentage":
-                100.0 * (~self.mask).sum() / self.mask.size,
+                100.0 * nodata_pixels / self.mask.size,
         }
+
+        # return {
+    
+        #     "minimum": float(np.min(valid)),
+    
+        #     "maximum": float(np.max(valid)),
+    
+        #     "mean": float(np.mean(valid)),
+    
+        #     "median": float(np.median(valid)),
+    
+        #     "std": float(np.std(valid)),
+    
+        #     "valid_pixels": int(self.mask.sum()),
+    
+        #     "nodata_pixels": int((~self.mask).sum()),
+    
+        #     "nan_percentage":
+        #         100.0 * (~self.mask).sum() / self.mask.size,
+        # }
 
 
     #def summary(self):
