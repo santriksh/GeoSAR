@@ -55,7 +55,7 @@ Python 3.10.20
 Clone the GeoSAR repository.
 
 ```bash
-git clone https://github.com/<your-username>/GeoSAR.git
+git clone https://github.com/santriksh/GeoSAR.git
 ```
 
 Move into the project directory.
@@ -134,6 +134,7 @@ If these functions are displayed without errors, the installation has completed 
 # Running the Test Suite
 
 To verify that your installation is functioning correctly, execute the automated test suite.
+Back in the terminal, execute:
 
 ```bash
 pytest

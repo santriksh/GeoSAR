@@ -83,3 +83,17 @@ def test_refined_lee_preserves_mask(
     )
 
 
+
+def test_refined_lee_preserves_valid_pixels(
+    image_with_corner_nodata,
+):
+
+    filtered = refined_lee(
+        image_with_corner_nodata,
+    )
+
+    assert np.isnan(
+        filtered.valid_pixels
+    ).sum() == 0
+
+

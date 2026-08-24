@@ -294,6 +294,71 @@ def refined_lee(
 # using the scalar implementation.
 #
 
+# def _correct_border_pixels(
+#     image: SARImage,
+#     filtered: NDArray[np.float64],
+# ) -> None:
+#     """
+#     Recompute border pixels using the scalar
+#     Refined Lee implementation.
+
+#     The vectorized implementation is mathematically
+#     equivalent to the scalar implementation only
+#     for interior pixels.
+
+#     Border pixels are recomputed using the scalar
+#     algorithm to preserve exact equivalence.
+#     """
+
+#     radius = 3
+
+#     windows = build_window_view(
+#         image.data,
+#     )
+
+#     rows, cols = image.shape
+
+#     #
+#     # Top + Bottom
+#     #
+#     for row in range(radius):
+
+#         for col in range(cols):
+
+#             filtered[row, col] = refined_lee_filter(
+#                 windows[row, col],
+#             )
+
+#             filtered[
+#                 rows - 1 - row,
+#                 col,
+#             ] = refined_lee_filter(
+#                 windows[
+#                     rows - 1 - row,
+#                     col,
+#                 ],
+#             )
+
+#     #
+#     # Left + Right
+#     #
+#     for row in range(
+#         radius,
+#         rows - radius,
+#     ):
+
+#         for col in range(radius):
+
+#             filtered[row, scol] = refined_lee_filter(
+#                 windows[row, col],
+#             )
+
+#             filtered[row,cols - 1 - col,] = refined_lee_filter(
+#                 windows[row,cols - 1 - col,],
+#             )
+
+
+
 def _correct_border_pixels(
     image: SARImage,
     filtered: NDArray[np.float64],
@@ -302,12 +367,19 @@ def _correct_border_pixels(
     Recompute border pixels using the scalar
     Refined Lee implementation.
 
-    The vectorized implementation is mathematically
-    equivalent to the scalar implementation only
-    for interior pixels.
+    If the scalar implementation cannot produce
+    a valid estimate (returns NaN), keep the
+    vectorized result.
+
 
     Border pixels are recomputed using the scalar
-    algorithm to preserve exact equivalence.
+    Refined Lee implementation.
+    
+    If the scalar implementation cannot produce
+    a valid estimate (e.g. because the window
+    contains insufficient valid pixels), the
+    vectorized estimate is retained.
+
     """
 
     radius = 3
@@ -325,19 +397,27 @@ def _correct_border_pixels(
 
         for col in range(cols):
 
-            filtered[row, col] = refined_lee_filter(
+            # ---------- Top ----------
+            result = refined_lee_filter(
                 windows[row, col],
             )
 
-            filtered[
-                rows - 1 - row,
-                col,
-            ] = refined_lee_filter(
+            if np.isfinite(result):
+                filtered[row, col] = result
+
+            # -------- Bottom ---------
+            result = refined_lee_filter(
                 windows[
                     rows - 1 - row,
                     col,
                 ],
             )
+
+            if np.isfinite(result):
+                filtered[
+                    rows - 1 - row,
+                    col,
+                ] = result
 
     #
     # Left + Right
@@ -349,16 +429,24 @@ def _correct_border_pixels(
 
         for col in range(radius):
 
-            filtered[row, col] = refined_lee_filter(
+            # ---------- Left ----------
+            result = refined_lee_filter(
                 windows[row, col],
             )
 
-            filtered[
-                row,
-                cols - 1 - col,
-            ] = refined_lee_filter(
+            if np.isfinite(result):
+                filtered[row, col] = result
+
+            # ---------- Right ----------
+            result = refined_lee_filter(
                 windows[
                     row,
                     cols - 1 - col,
                 ],
             )
+
+            if np.isfinite(result):
+                filtered[
+                    row,
+                    cols - 1 - col,
+                ] = result

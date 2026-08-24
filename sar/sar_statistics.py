@@ -665,8 +665,6 @@ def _weighted_window_mean(
 
 
 
-
-
 def window_statistics(
     windows: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -697,12 +695,12 @@ def window_statistics(
             "windows must contain at least one window."
         )
 
-    means = np.mean(
+    means = np.nanmean(
         windows,
         axis=(1, 2),
     )
 
-    variances = np.var(
+    variances = np.nanvar(
         windows,
         axis=(1, 2),
     )

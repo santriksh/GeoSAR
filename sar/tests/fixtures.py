@@ -22,6 +22,7 @@ from copy import deepcopy
 from sar.tests.utils import clone_image
 from dataclasses import replace
 from sar.tests.utils import make_test_image
+from pathlib import Path
 
 @pytest.fixture
 def sample_metadata():
@@ -412,4 +413,51 @@ def sample_linear_image(sample_metadata):
         data=data,
         mask=mask,
         metadata=metadata,
+    )
+
+
+@pytest.fixture
+def sample_nisar_file():
+    """
+    Path to the synthetic NISAR GCOV product.
+    """
+
+    return (
+        Path(__file__).parent
+        / "data"
+        / "sample_nisar_gcov.h5"
+    )
+
+@pytest.fixture
+def large_linear_image(sample_metadata):
+
+    metadata = deepcopy(sample_metadata)
+    metadata.processing.value_scale = "linear"
+
+    rng = np.random.default_rng(42)
+
+    data = rng.random((50, 50)).astype(np.float32)
+
+    mask = np.ones_like(data, dtype=bool)
+
+    return SARImage(
+        data=data,
+        mask=mask,
+        metadata=metadata,
+    )
+
+
+@pytest.fixture
+def image_with_corner_nodata(large_linear_image):
+
+    data = large_linear_image.data.copy()
+
+    data[:5, :5] = np.nan
+
+    mask = np.isfinite(data)
+
+    return SARImage(
+        data=data,
+        mask=mask,
+        metadata=deepcopy(large_linear_image.metadata),
     )
