@@ -22,6 +22,7 @@ from sar.sar_metadata import (
 )
 from sar.sar_image import SARImage
 import numpy as np
+from sar.covariance import CovarianceImage
 
 
 _METADATA_DATASETS = {
@@ -300,3 +301,73 @@ class NISARReader(BaseReader):
         return self._polarizations[
             self.default_frequency
         ][0]
+
+
+    def read_covariance(
+        self,
+        frequency: str | None = None,
+    ) -> CovarianceImage:
+        """
+        Read all six independent covariance channels
+        from a NISAR GCOV product.
+    
+        Parameters
+        ----------
+        frequency
+            Frequency group to read. If omitted, the
+            default frequency is used.
+    
+        Returns
+        -------
+        CovarianceImage
+            Six-channel covariance image.
+        """
+    
+        frequency = (
+            frequency or self.default_frequency
+        )
+    
+        if frequency not in self.frequencies:
+            raise ValueError(
+                f"Unknown frequency '{frequency}'."
+            )
+    
+        channels = (
+            "HHHH",
+            "HHHV",
+            "HHVV",
+            "HVHV",
+            "HVVV",
+            "VVVV",
+        )
+    
+        images = {}
+    
+        for channel in channels:
+    
+            data = self._read_image(
+                frequency=frequency,
+                polarization=channel,
+            )
+    
+            metadata = self._build_metadata()
+    
+            mask = np.isfinite(data)
+    
+            images[channel] = SARImage(
+                data=data,
+                mask=mask,
+                metadata=metadata,
+            )
+    
+        return CovarianceImage(
+            hhhh=images["HHHH"],
+            hhhv=images["HHHV"],
+            hhvv=images["HHVV"],
+            hvhv=images["HVHV"],
+            hvvv=images["HVVV"],
+            vvvv=images["VVVV"],
+        )
+
+
+

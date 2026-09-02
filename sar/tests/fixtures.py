@@ -461,3 +461,10 @@ def image_with_corner_nodata(large_linear_image):
         mask=mask,
         metadata=deepcopy(large_linear_image.metadata),
     )
+
+
+@pytest.fixture
+def sample_nisar_quadpol_file():
+    return Path(
+        "tests/data/sample_nisar_quadpol_gcov.h5"
+    )

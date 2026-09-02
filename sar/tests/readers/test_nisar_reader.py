@@ -7,7 +7,7 @@ import pytest
 import h5py
 import numpy as np
 from sar.readers.nisar import NISARReader
-
+from sar.covariance import CovarianceImage
 
 def test_reader_initialization(sample_nisar_file):
 
@@ -154,3 +154,119 @@ def test_read_image_explicit_selection(sample_nisar_file):
     reader.close()
 
 
+def test_read_covariance_returns_covariance_image(
+    sample_nisar_quadpol_file,
+):
+    reader = NISARReader(
+        sample_nisar_quadpol_file,
+    )
+
+    covariance = reader.read_covariance()
+
+    assert isinstance(
+        covariance,
+        CovarianceImage,
+    )
+
+    reader.close()
+
+
+def test_read_covariance_reads_all_channels(
+    sample_nisar_quadpol_file,
+):
+    reader = NISARReader(
+        sample_nisar_quadpol_file,
+    )
+
+    covariance = reader.read_covariance()
+
+    expected_channels = (
+        "HHHH",
+        "HHHV",
+        "HHVV",
+        "HVHV",
+        "HVVV",
+        "VVVV",
+    )
+
+    for channel in expected_channels:
+
+        image = covariance[channel]
+
+        assert image.shape == (3, 3)
+
+    reader.close()
+
+
+def test_read_covariance_reads_expected_values(
+    sample_nisar_quadpol_file,
+):
+    reader = NISARReader(
+        sample_nisar_quadpol_file,
+    )
+
+    covariance = reader.read_covariance()
+
+    assert covariance["HHHH"].data[0, 0] == 16.0
+    assert covariance["HHVV"].data[0, 0] == 16.0
+    assert covariance["HVHV"].data[0, 0] == 0.0
+    assert covariance["VVVV"].data[0, 0] == 16.0
+
+    assert covariance["HHVV"].data[0, 1] == -16.0
+
+    assert covariance["HVHV"].data[0, 2] == 16.0
+
+    reader.close()
+
+
+def test_read_covariance_preserves_complex_channels(
+    sample_nisar_quadpol_file,
+):
+    reader = NISARReader(
+        sample_nisar_quadpol_file,
+    )
+
+    covariance = reader.read_covariance()
+
+    assert np.iscomplexobj(
+        covariance["HHHV"].data
+    )
+
+    assert np.iscomplexobj(
+        covariance["HHVV"].data
+    )
+
+    assert np.iscomplexobj(
+        covariance["HVVV"].data
+    )
+
+    reader.close()
+
+
+def test_read_covariance_preserves_spatial_metadata(
+    sample_nisar_quadpol_file,
+):
+    reader = NISARReader(
+        sample_nisar_quadpol_file,
+    )
+
+    covariance = reader.read_covariance()
+
+    reference = covariance["HHHH"]
+
+    for channel in (
+        "HHHV",
+        "HHVV",
+        "HVHV",
+        "HVVV",
+        "VVVV",
+    ):
+        image = covariance[channel]
+
+        assert image.shape == reference.shape
+        assert image.crs == reference.crs
+        assert image.transform == reference.transform
+        assert image.bounds == reference.bounds
+        assert image.resolution == reference.resolution
+
+    reader.close()
