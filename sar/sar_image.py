@@ -134,9 +134,11 @@ class SARImage:
             vmin=np.nanpercentile(self.data, lower),
             vmax=np.nanpercentile(self.data, upper),
         )
+        label = f"Backscatter ({self.value_scale})"
     
         if colorbar:
-            plt.colorbar(img, ax=ax, label="Backscatter (dB)")
+            #plt.colorbar(img, ax=ax, label="Backscatter (dB)")
+            plt.colorbar(img, ax=ax, label=label)
     
         if title is None:
             title = "SAR Image"
@@ -172,7 +174,7 @@ class SARImage:
             title = "Backscatter Histogram"
     
         ax.set_title(title)
-        ax.set_xlabel("Backscatter (dB)")
+        ax.set_xlabel("Backscatter ({self.value_scale})")
         ax.set_ylabel("Pixel Count")
     
         ax.grid(alpha=0.3)

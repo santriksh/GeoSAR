@@ -55,6 +55,16 @@ def create_sample():
             dtype=np.float32,
         )
 
+        frequency.create_dataset(
+            "listOfPolarizations",
+            data=np.array([b"HH"]),
+        )
+
+        frequency.create_dataset(
+            "listOfCovarianceTerms",
+            data=np.array([b"HHHH"]),
+        )
+
         ds.attrs["description"] = (
             b"Covariance between HH and HH"
         )

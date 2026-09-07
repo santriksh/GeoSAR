@@ -71,7 +71,7 @@ def test_available_polarizations(sample_nisar_file):
     reader = NISARReader(sample_nisar_file)
 
     assert reader.polarizations == {
-        "frequencyA": ["HHHH"]
+        "frequencyA": ["HH"]
     }
 
     reader.close()
@@ -90,7 +90,7 @@ def test_default_polarization(sample_nisar_file):
 
     reader = NISARReader(sample_nisar_file)
 
-    assert reader.default_polarization == "HHHH"
+    assert reader.default_polarization == "HH"
 
     reader.close()
 
@@ -146,7 +146,7 @@ def test_read_image_explicit_selection(sample_nisar_file):
 
     image = reader._read_image(
         frequency="frequencyA",
-        polarization="HHHH",
+        polarization="HH",
     )
 
     assert image.shape == (50, 50)
@@ -268,5 +268,183 @@ def test_read_covariance_preserves_spatial_metadata(
         assert image.transform == reference.transform
         assert image.bounds == reference.bounds
         assert image.resolution == reference.resolution
+
+    reader.close()
+
+def test_available_polarizations_realistic_nisar_product(tmp_path):
+
+    filename = tmp_path / "realistic_nisar.h5"
+
+    with h5py.File(filename, "w") as f:
+
+        science = f.create_group("science")
+        lsar = science.create_group("LSAR")
+        gcov = lsar.create_group("GCOV")
+        grids = gcov.create_group("grids")
+        frequency = grids.create_group("frequencyA")
+
+        # Actual covariance dataset
+        frequency.create_dataset(
+            "HHHH",
+            data=np.ones((5, 5), dtype=np.float32),
+        )
+
+        # NISAR metadata
+        frequency.create_dataset(
+            "listOfPolarizations",
+            data=np.array([b"HH"]),
+        )
+
+        frequency.create_dataset(
+            "listOfCovarianceTerms",
+            data=np.array([b"HHHH"]),
+        )
+
+        frequency.create_dataset(
+            "mask",
+            data=np.zeros((5, 5), dtype=np.uint8),
+        )
+
+        frequency.create_dataset(
+            "numberOfLooks",
+            data=np.ones((5, 5), dtype=np.float32),
+        )
+
+        frequency.create_dataset(
+            "numberOfSubSwaths",
+            data=np.ones((5, 5), dtype=np.uint8),
+        )
+
+        frequency.create_dataset(
+            "rtcGammaToSigmaFactor",
+            data=np.ones((5, 5), dtype=np.float32),
+        )
+
+        frequency.create_dataset(
+            "xCoordinates",
+            data=np.arange(5, dtype=np.float64),
+        )
+
+        frequency.create_dataset(
+            "yCoordinates",
+            data=np.arange(5, dtype=np.float64),
+        )
+
+        projection = frequency.create_group("projection")
+        projection.attrs["epsg_code"] = 4326
+
+    reader = NISARReader(filename)
+
+    assert reader.polarizations == {
+        "frequencyA": ["HH"]
+    }
+
+    reader.close()
+
+
+def test_available_covariance_terms_realistic_nisar_product(tmp_path):
+
+    filename = tmp_path / "realistic_nisar.h5"
+
+    with h5py.File(filename, "w") as f:
+
+        science = f.create_group("science")
+        lsar = science.create_group("LSAR")
+        gcov = lsar.create_group("GCOV")
+        grids = gcov.create_group("grids")
+        frequency = grids.create_group("frequencyA")
+
+        frequency.create_dataset(
+            "HHHH",
+            data=np.ones((5, 5), dtype=np.float32),
+        )
+
+        frequency.create_dataset(
+            "listOfPolarizations",
+            data=np.array([b"HH"]),
+        )
+
+        frequency.create_dataset(
+            "listOfCovarianceTerms",
+            data=np.array([b"HHHH"]),
+        )
+
+        frequency.create_dataset(
+            "mask",
+            data=np.zeros((5, 5), dtype=np.uint8),
+        )
+
+        frequency.create_dataset(
+            "numberOfLooks",
+            data=np.ones((5, 5), dtype=np.float32),
+        )
+
+        frequency.create_dataset(
+            "numberOfSubSwaths",
+            data=np.ones((5, 5), dtype=np.uint8),
+        )
+
+        frequency.create_dataset(
+            "rtcGammaToSigmaFactor",
+            data=np.ones((5, 5), dtype=np.float32),
+        )
+
+        frequency.create_dataset(
+            "xCoordinates",
+            data=np.arange(5, dtype=np.float64),
+        )
+
+        frequency.create_dataset(
+            "yCoordinates",
+            data=np.arange(5, dtype=np.float64),
+        )
+
+        projection = frequency.create_group("projection")
+        projection.attrs["epsg_code"] = 4326
+
+    reader = NISARReader(filename)
+
+    assert reader.covariance_terms == {
+        "frequencyA": ["HHHH"]
+    }
+
+    reader.close()
+
+
+def test_read_covariance_rejects_incomplete_covariance(
+    realistic_nisar_file,
+):
+
+    reader = NISARReader(realistic_nisar_file)
+
+    with pytest.raises(
+        ValueError,
+        match="complete covariance",
+    ):
+        reader.read_covariance()
+
+    reader.close()
+
+
+def test_covariance_terms_are_incomplete_for_single_pol_product(
+    realistic_nisar_file,
+):
+
+    reader = NISARReader(realistic_nisar_file)
+
+    assert reader.covariance_terms["frequencyA"] == [
+        "HHHH"
+    ]
+
+    required_terms = {
+        "HHHH",
+        "HHHV",
+        "HHVV",
+        "HVHV",
+        "HVVV",
+        "VVVV",
+    }
+
+    assert set(reader.covariance_terms["frequencyA"]) != required_terms
 
     reader.close()

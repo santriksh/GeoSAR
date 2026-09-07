@@ -29,7 +29,7 @@ def test_polarization(sample_nisar_file):
 
     metadata = reader._read_acquisition_metadata()
 
-    assert metadata.polarization == "HHHH"
+    assert metadata.polarization == "HH"
 
     reader.close()
 

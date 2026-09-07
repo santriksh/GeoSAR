@@ -40,3 +40,6 @@ htmlcov/
 tmp*
 
 dev_tests.ipynb
+
+# Large NISAR exploration products
+/NISAR_*.h5

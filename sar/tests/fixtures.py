@@ -23,6 +23,7 @@ from sar.tests.utils import clone_image
 from dataclasses import replace
 from sar.tests.utils import make_test_image
 from pathlib import Path
+import h5py 
 
 @pytest.fixture
 def sample_metadata():
@@ -468,3 +469,67 @@ def sample_nisar_quadpol_file():
     return Path(
         "tests/data/sample_nisar_quadpol_gcov.h5"
     )
+
+
+@pytest.fixture
+def realistic_nisar_file(tmp_path):
+
+    filename = tmp_path / "realistic_nisar.h5"
+
+    with h5py.File(filename, "w") as f:
+
+        science = f.create_group("science")
+        lsar = science.create_group("LSAR")
+        gcov = lsar.create_group("GCOV")
+        grids = gcov.create_group("grids")
+        frequency = grids.create_group("frequencyA")
+
+        frequency.create_dataset(
+            "HHHH",
+            data=np.ones((5, 5), dtype=np.float32),
+        )
+
+        frequency.create_dataset(
+            "listOfPolarizations",
+            data=np.array([b"HH"]),
+        )
+
+        frequency.create_dataset(
+            "listOfCovarianceTerms",
+            data=np.array([b"HHHH"]),
+        )
+
+        frequency.create_dataset(
+            "mask",
+            data=np.zeros((5, 5), dtype=np.uint8),
+        )
+
+        frequency.create_dataset(
+            "numberOfLooks",
+            data=np.ones((5, 5), dtype=np.float32),
+        )
+
+        frequency.create_dataset(
+            "numberOfSubSwaths",
+            data=np.ones((5, 5), dtype=np.uint8),
+        )
+
+        frequency.create_dataset(
+            "rtcGammaToSigmaFactor",
+            data=np.ones((5, 5), dtype=np.float32),
+        )
+
+        frequency.create_dataset(
+            "xCoordinates",
+            data=np.arange(5, dtype=np.float64),
+        )
+
+        frequency.create_dataset(
+            "yCoordinates",
+            data=np.arange(5, dtype=np.float64),
+        )
+
+        projection = frequency.create_group("projection")
+        projection.attrs["epsg_code"] = 4326
+
+    return filename

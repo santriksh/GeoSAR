@@ -89,31 +89,108 @@ class NISARReader(BaseReader):
                 )
 
 
+
     def _discover_product(self):
         """
-        Discover available frequencies and polarizations.
+        Discover available frequencies, polarizations,
+        and covariance terms.
         """
     
         self._frequencies = sorted(self._grids.keys())
     
-        # excluded = {
-        #     "projection",
-        #     "xCoordinates",
-        #     "yCoordinates",
-        # }
-    
         self._polarizations = {}
+        self._covariance_terms = {}
     
         for frequency in self._frequencies:
     
             group = self._grids[frequency]
     
-            self._polarizations[frequency] = sorted(
-                name
-                for name in group.keys()
-                if name not in _METADATA_DATASETS
-            )
+            # ------------------------------------------
+            # Polarizations
+            # ------------------------------------------
+    
+            if "listOfPolarizations" in group:
+    
+                values = group["listOfPolarizations"][()]
+    
+                self._polarizations[frequency] = sorted(
+                    value.decode()
+                    if isinstance(value, bytes)
+                    else str(value)
+                    for value in values
+                )
+    
+            else:
+    
+                # Backward-compatible fallback for our
+                # minimal synthetic fixture.
+                self._polarizations[frequency] = sorted(
+                    name
+                    for name in group.keys()
+                    if name not in _METADATA_DATASETS
+                )
+    
+            # ------------------------------------------
+            # Covariance terms
+            # ------------------------------------------
+    
+            if "listOfCovarianceTerms" in group:
+    
+                values = group["listOfCovarianceTerms"][()]
+    
+                self._covariance_terms[frequency] = sorted(
+                    value.decode()
+                    if isinstance(value, bytes)
+                    else str(value)
+                    for value in values
+                )
+    
+            else:
+    
+                #self._covariance_terms[frequency] = []
+                required_terms = {
+                    "HHHH",
+                    "HHHV",
+                    "HHVV",
+                    "HVHV",
+                    "HVVV",
+                    "VVVV",
+                }
+            
+                self._covariance_terms[frequency] = sorted(
+                    name
+                    for name in group.keys()
+                    if name in required_terms
+                )
 
+    def _resolve_polarization_dataset(
+        self,
+        frequency: str,
+        polarization: str,
+    ) -> str:
+        """
+        Resolve a polarization to its corresponding NISAR dataset.
+    
+        Parameters
+        ----------
+        frequency : str
+            Frequency group.
+    
+        polarization : str
+            Polarization, e.g. "HH".
+    
+        Returns
+        -------
+        str
+            Dataset name containing the polarization data.
+        """
+    
+        if polarization == "HH":
+            return "HHHH"
+    
+        raise ValueError(
+            f"Unsupported polarization '{polarization}'."
+        )
 
     def _read_image(self,frequency: str | None = None,polarization: str | None = None,):
         """
@@ -147,11 +224,19 @@ class NISARReader(BaseReader):
             raise ValueError(
                 f"Unknown polarization '{polarization}'."
             )
-        
 
+        dataset_name = self._resolve_polarization_dataset(
+            frequency,
+            polarization,
+        )
+        
         return self._grids[
-        frequency
-    ][polarization][()]
+            frequency
+        ][dataset_name][()]
+
+    #     return self._grids[
+    #     frequency
+    # ][polarization][()]
 
     
     
@@ -281,6 +366,72 @@ class NISARReader(BaseReader):
     
 
 
+    def read_covariance(self, frequency=None) -> CovarianceImage:
+        """
+        Read the complete six-term covariance matrix.
+    
+        A full polarimetric covariance image requires:
+            HHHH, HHHV, HHVV, HVHV, HVVV, VVVV
+        """
+    
+        frequency = frequency or self.default_frequency
+    
+        if frequency not in self.frequencies:
+            raise ValueError(
+                f"Unknown frequency '{frequency}'. "
+                f"Available frequencies: {self.frequencies}"
+            )
+    
+        required_terms = (
+            "HHHH",
+            "HHHV",
+            "HHVV",
+            "HVHV",
+            "HVVV",
+            "VVVV",
+        )
+    
+        available_terms = set(self.covariance_terms[frequency])
+    
+        missing_terms = [
+            term for term in required_terms
+            if term not in available_terms
+        ]
+    
+        if missing_terms:
+            raise ValueError(
+                "Incomplete covariance: "
+                f"missing covariance terms {missing_terms}"
+            )
+    
+        channels = {}
+    
+        for term in required_terms:
+            channels[term] = self._grids[frequency][term][()]
+    
+        metadata = self._build_metadata()
+    
+        mask = np.isfinite(channels["HHHH"])
+    
+        images = {
+            term: SARImage(
+                data=data,
+                mask=mask.copy(),
+                metadata=metadata,
+            )
+            for term, data in channels.items()
+        }
+    
+        return CovarianceImage(
+            hhhh=images["HHHH"],
+            hhhv=images["HHHV"],
+            hhvv=images["HHVV"],
+            hvhv=images["HVHV"],
+            hvvv=images["HVVV"],
+            vvvv=images["VVVV"],
+        )
+
+
     @property
     def frequencies(self):
         return self._frequencies
@@ -302,72 +453,12 @@ class NISARReader(BaseReader):
             self.default_frequency
         ][0]
 
-
-    def read_covariance(
-        self,
-        frequency: str | None = None,
-    ) -> CovarianceImage:
+    @property
+    def covariance_terms(self):
         """
-        Read all six independent covariance channels
-        from a NISAR GCOV product.
-    
-        Parameters
-        ----------
-        frequency
-            Frequency group to read. If omitted, the
-            default frequency is used.
-    
-        Returns
-        -------
-        CovarianceImage
-            Six-channel covariance image.
+        Available covariance terms for each frequency.
         """
-    
-        frequency = (
-            frequency or self.default_frequency
-        )
-    
-        if frequency not in self.frequencies:
-            raise ValueError(
-                f"Unknown frequency '{frequency}'."
-            )
-    
-        channels = (
-            "HHHH",
-            "HHHV",
-            "HHVV",
-            "HVHV",
-            "HVVV",
-            "VVVV",
-        )
-    
-        images = {}
-    
-        for channel in channels:
-    
-            data = self._read_image(
-                frequency=frequency,
-                polarization=channel,
-            )
-    
-            metadata = self._build_metadata()
-    
-            mask = np.isfinite(data)
-    
-            images[channel] = SARImage(
-                data=data,
-                mask=mask,
-                metadata=metadata,
-            )
-    
-        return CovarianceImage(
-            hhhh=images["HHHH"],
-            hhhv=images["HHHV"],
-            hhvv=images["HHVV"],
-            hvhv=images["HVHV"],
-            hvvv=images["HVVV"],
-            vvvv=images["VVVV"],
-        )
+        return self._covariance_terms
 
 
 
