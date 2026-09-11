@@ -53,4 +53,9 @@ def pauli_rgb_from_covariance(
         + 2.0 * np.real(hhvv)
     )
 
-    return red, green, blue
+    #return red, green, blue
+    return (
+        np.real(red),
+        np.real(green),
+        np.real(blue),
+    )

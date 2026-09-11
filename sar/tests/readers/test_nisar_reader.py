@@ -214,7 +214,7 @@ def test_read_covariance_reads_expected_values(
 
     assert covariance["HHVV"].data[0, 1] == -16.0
 
-    assert covariance["HVHV"].data[0, 2] == 16.0
+    assert covariance["HVHV"].data[0, 2] == 8.0
 
     reader.close()
 
@@ -446,5 +446,270 @@ def test_covariance_terms_are_incomplete_for_single_pol_product(
     }
 
     assert set(reader.covariance_terms["frequencyA"]) != required_terms
+
+    reader.close()
+
+
+def test_read_covariance_symmetrizes_cross_pol_terms(
+    sample_nisar_quadpol_file,
+):
+    reader = NISARReader(
+        sample_nisar_quadpol_file,
+    )
+
+    covariance = reader.read_covariance()
+
+    # At synthetic pixel (2,2):
+    #
+    # HHHV = 1 + 2j
+    # HHVH = 3 - 1j
+    #
+    # Symmetrized HHHV:
+    #
+    # ((1 + 2j) + (3 - 1j)) / 2
+    # = 2 + 0.5j
+
+    assert np.allclose(
+        covariance["HHHV"].data[2, 2],
+        2.0 + 0.5j,
+    )
+
+    reader.close()
+
+
+def test_read_covariance_window_returns_window(
+    sample_nisar_quadpol_file,
+):
+    reader = NISARReader(
+        sample_nisar_quadpol_file,
+    )
+
+    covariance = reader.read_covariance_window(
+        rows=slice(0, 2),
+        cols=slice(0, 2),
+    )
+
+    assert isinstance(
+        covariance,
+        CovarianceImage,
+    )
+
+    assert covariance["HHHH"].shape == (2, 2)
+    assert covariance["HHVV"].shape == (2, 2)
+    assert covariance["HVHV"].shape == (2, 2)
+    assert covariance["VVVV"].shape == (2, 2)
+
+    reader.close()
+
+
+    def test_read_covariance_applies_nisar_symmetrization(
+        sample_nisar_quadpol_file,
+    ):
+        reader = NISARReader(
+            sample_nisar_quadpol_file,
+        )
+
+        covariance = reader.read_covariance()
+
+        # Synthetic fixture:
+        #
+        # HVHV = 16
+        # VHVH = 16
+        # HVVH = 0
+        #
+        # Therefore:
+        #
+        # HVHV_G3 = (16 + 16 + 2*0) / 4 = 8
+
+        assert np.isclose(
+            covariance["HVHV"].data[0, 2],
+            8.0,
+        )
+
+        # HHHV_G3 = (HHHV + HHVH) / 2
+        assert np.isclose(
+            covariance["HHHV"].data[0, 2],
+            0.0,
+        )
+
+        # HVVV_G3 = (HVVV + VHVV) / 2
+        assert np.isclose(
+            covariance["HVVV"].data[0, 2],
+            0.0,
+        )
+
+        reader.close()
+
+
+def test_read_covariance_applies_nisar_symmetrization(
+    sample_nisar_quadpol_file,
+):
+    reader = NISARReader(
+        sample_nisar_quadpol_file,
+    )
+
+    covariance = reader.read_covariance()
+
+    # Synthetic fixture:
+    #
+    # HVHV = 16
+    # VHVH = 16
+    # HVVH = 0
+    #
+    # Therefore:
+    #
+    # HVHV_G3 = (16 + 16 + 2*0) / 4 = 8
+
+    assert np.isclose(
+        covariance["HVHV"].data[0, 2],
+        8.0,
+    )
+
+    # HHHV_G3 = (HHHV + HHVH) / 2
+    assert np.isclose(
+        covariance["HHHV"].data[0, 2],
+        0.0,
+    )
+
+    # HVVV_G3 = (HVVV + VHVV) / 2
+    assert np.isclose(
+        covariance["HVVV"].data[0, 2],
+        0.0,
+    )
+
+    reader.close()
+
+
+def test_read_covariance_window_applies_orientation_correction(
+        sample_nisar_quadpol_file,
+    ):
+        reader = NISARReader(
+            sample_nisar_quadpol_file,
+        )
+
+        rows = slice(2, 3)
+        cols = slice(2, 3)
+
+        uncorrected = reader.read_covariance_window(
+            rows=rows,
+            cols=cols,
+            frequency="frequencyA",
+            orientation_correction=False,
+        )
+
+        corrected = reader.read_covariance_window(
+            rows=rows,
+            cols=cols,
+            frequency="frequencyA",
+            orientation_correction=True,
+        )
+
+        angle = np.deg2rad(59.0)
+
+        expected_hhhv = (
+            (1.0 + 2.0j) * np.exp(-1j * angle)
+            + (3.0 - 1.0j) * np.exp(0.0j)
+        ) / 2.0
+
+        expected_hhvv = (
+            (4.0 + 5.0j) * np.exp(-1j * angle)
+        )
+
+        expected_hvvv = (
+            (1.0 - 2.0j)
+            + (3.0 + 4.0j) * np.exp(-1j * angle)
+        ) / 2.0
+
+        assert np.allclose(
+            corrected["HHHV"].data[0, 0],
+            expected_hhhv,
+        )
+
+        assert np.allclose(
+            corrected["HHVV"].data[0, 0],
+            expected_hhvv,
+        )
+
+        assert np.allclose(
+            corrected["HVVV"].data[0, 0],
+            expected_hvvv,
+        )
+
+        # The correction must actually change the affected terms.
+        assert not np.allclose(
+            corrected["HHVV"].data,
+            uncorrected["HHVV"].data,
+        )
+
+        reader.close()
+
+
+def test_read_covariance_window_to_pauli_rgb(
+    sample_nisar_quadpol_file,
+):
+    reader = NISARReader(
+        sample_nisar_quadpol_file,
+    )
+
+    covariance = reader.read_covariance_window(
+        rows=slice(2, 3),
+        cols=slice(2, 3),
+        frequency="frequencyA",
+        orientation_correction=True,
+    )
+
+    red, green, blue = covariance.pauli_rgb()
+
+    # Corrected G3 terms at synthetic pixel (2,2).
+    hhhh = 10.0
+    hvhv = 5.0
+    vvvv = 12.0
+
+    hhvv = covariance["HHVV"].data[0, 0]
+
+    expected_red = (
+        0.5
+        * (
+            hhhh
+            + vvvv
+            - 2.0 * np.real(hhvv)
+        )
+    )
+    angle = np.deg2rad(59.0)
+    expected_hvhv_g3 = (
+        5.0
+        + 5.0
+        + 2.0 * np.real(
+            (2.0 + 3.0j) * np.exp(1j * angle)
+        )
+    ) / 4.0
+
+    expected_green = 2.0 * expected_hvhv_g3
+
+    #expected_green = 2.0 * hvhv
+
+    expected_blue = (
+        0.5
+        * (
+            hhhh
+            + vvvv
+            + 2.0 * np.real(hhvv)
+        )
+    )
+
+    assert np.isclose(
+        red.data[0, 0],
+        expected_red,
+    )
+
+    assert np.isclose(
+        green.data[0, 0],
+        expected_green,
+    )
+
+    assert np.isclose(
+        blue.data[0, 0],
+        expected_blue,
+    )
 
     reader.close()

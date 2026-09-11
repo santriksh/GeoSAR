@@ -124,3 +124,21 @@ def test_pauli_rgb_preserves_shape():
     assert red.shape == shape
     assert green.shape == shape
     assert blue.shape == shape
+
+
+def test_pauli_rgb_returns_real_arrays():
+    hhhh = np.array([[10.0]])
+    hhvv = np.array([[2.0 + 3.0j]])
+    hvhv = np.array([[5.0]])
+    vvvv = np.array([[12.0]])
+
+    red, green, blue = pauli_rgb_from_covariance(
+        hhhh=hhhh,
+        hhvv=hhvv,
+        hvhv=hvhv,
+        vvvv=vvvv,
+    )
+
+    assert not np.iscomplexobj(red)
+    assert not np.iscomplexobj(green)
+    assert not np.iscomplexobj(blue)
