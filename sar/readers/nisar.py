@@ -11,7 +11,7 @@ from .base import BaseReader
 from affine import Affine
 from rasterio.coords import BoundingBox
 from rasterio.crs import CRS
-
+from sar.io.window import Window
 from sar.sar_metadata import SpatialMetadata
 from sar.sar_metadata import AcquisitionMetadata
 from sar.sar_metadata import ProcessingMetadata
@@ -584,8 +584,7 @@ class NISARReader(BaseReader):
 
     def read_covariance_window(
         self,
-        rows: slice,
-        cols: slice,
+        window: Window,
         frequency: str | None = None,
         *,
         orientation_correction: bool = False,
@@ -598,32 +597,14 @@ class NISARReader(BaseReader):
         product-specific polarization-orientation issue, and then
         converted into the six independent terms of the symmetrized
         3 × 3 covariance matrix.
-
-        Parameters
-        ----------
-        rows:
-            Row slice defining the requested window.
-
-        cols:
-            Column slice defining the requested window.
-
-        frequency:
-            NISAR GCOV frequency group.
-
-        orientation_correction:
-            Apply the P05023 polarization-orientation phase correction.
-
-            False by default because this correction is specific to
-            affected products and should not be silently applied to
-            every NISAR product.
         """
 
         frequency = frequency or self.default_frequency
 
         raw_covariance = self._read_covariance_window(
             frequency=frequency,
-            rows=rows,
-            cols=cols,
+            rows=window.rows,
+            cols=window.cols,
         )
 
         if orientation_correction:

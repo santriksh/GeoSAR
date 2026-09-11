@@ -8,6 +8,8 @@ import h5py
 import numpy as np
 from sar.readers.nisar import NISARReader
 from sar.covariance import CovarianceImage
+from sar.io.window import Window
+
 
 def test_reader_initialization(sample_nisar_file):
 
@@ -485,9 +487,13 @@ def test_read_covariance_window_returns_window(
     )
 
     covariance = reader.read_covariance_window(
-        rows=slice(0, 2),
-        cols=slice(0, 2),
-    )
+    window=Window(
+        row_start=0,
+        row_stop=2,
+        col_start=0,
+        col_stop=2,
+    ),
+)
 
     assert isinstance(
         covariance,
@@ -587,19 +593,21 @@ def test_read_covariance_window_applies_orientation_correction(
             sample_nisar_quadpol_file,
         )
 
-        rows = slice(2, 3)
-        cols = slice(2, 3)
+        window = Window(
+            row_start=2,
+            row_stop=3,
+            col_start=2,
+            col_stop=3,
+        )
 
         uncorrected = reader.read_covariance_window(
-            rows=rows,
-            cols=cols,
+            window=window,
             frequency="frequencyA",
             orientation_correction=False,
         )
 
         corrected = reader.read_covariance_window(
-            rows=rows,
-            cols=cols,
+            window=window,
             frequency="frequencyA",
             orientation_correction=True,
         )
@@ -651,9 +659,15 @@ def test_read_covariance_window_to_pauli_rgb(
         sample_nisar_quadpol_file,
     )
 
+    window = Window(
+        row_start=2,
+        row_stop=3,
+        col_start=2,
+        col_stop=3,
+    )
+
     covariance = reader.read_covariance_window(
-        rows=slice(2, 3),
-        cols=slice(2, 3),
+        window=window,
         frequency="frequencyA",
         orientation_correction=True,
     )
